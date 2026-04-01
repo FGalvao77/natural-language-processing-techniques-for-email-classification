@@ -15,4 +15,3 @@ model/*.pkl
 
 # Tools
 .python-version
-uv.lock
