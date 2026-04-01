@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       TYPEFORM_TOKEN:     ${{ secrets.TYPEFORM_TOKEN }}
       TYPEFORM_FORM_ID:   ${{ secrets.TYPEFORM_FORM_ID }}
       FIELD_NAME:         ${{ secrets.FIELD_NAME }}
@@ -24,16 +23,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           version: "latest"
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.11"
 
