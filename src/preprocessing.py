@@ -19,14 +19,6 @@ def add_business_days(start_date, num_days):
 TODAY = datetime.today()
 MAXIMUM_RESPONSE_TIME = 5
 EXPECTED_BUSINESS_DATE = add_business_days(TODAY, MAXIMUM_RESPONSE_TIME)
-# print(f"Data de hoje: {TODAY.strftime('%d/%m/%Y')}")
-# print(f"Data esperada (5 dias úteis): {EXPECTED_BUSINESS_DATE.strftime('%d/%m/%Y')}")
-
-# from datetime import datetime
-
-# TODAY = datetime.today().date()
-# MAXIMUM_RESPONSE_TIME = 5
-# EXPECTED_DATE = TODAY + timedelta(days=MAXIMUM_RESPONSE_TIME)
 
 nlp = spacy.load('pt_core_news_sm', disable=['parser', 'ner'])
 
@@ -71,7 +63,6 @@ def batch_preprocess(texts: List[str], **kwargs) -> List[str]:
     return [preprocess_text(t, **kwargs) for t in texts]
 
 if __name__ == '__main__':
-    # print(preprocess_text('Olá, favor enviar o contrato para fulano@example.com. Prazo 10/03/2026'))
     print(preprocess_text(f'Olá, favor enviar o contrato para fulano@example.com. Prazo {EXPECTED_BUSINESS_DATE}'))
 
 

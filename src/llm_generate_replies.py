@@ -23,11 +23,11 @@ try:
 except Exception:
     openai = None
 
-DPROMPT_TEMPLATE = '''Você é um assistente especialista em atendimento ao cliente da empresa Eks-AI.
+PROMPT_TEMPLATE = '''Você é um assistente especialista em atendimento ao cliente da empresa Eks-AI.
 Receba a mensagem do cliente abaixo, o tipo previsto e o sentimento. Produza:
 
-1) Um assunto de resposta, no máximo duas linhas.
-2) Um corpo de resposta formal em português do Brasil, porém seja empático, com máximo 6-8 linhas (não mais que ~120-200 palavras),
+1) Um assunto de resposta, com no máximo duas linhas.
+2) Um corpo de resposta formal em português do Brasil, porém seja empático, e máximo 6-8 linhas (não mais que ~120-200 palavras),
    pedindo confirmação quando necessário e oferecendo o próximo passo (ex: abrir ticket, solicitar dados e etc.).
 3) Uma breve justificativa (1-2 frases) explicando por que essa resposta é adequada (para revisão humana).
 

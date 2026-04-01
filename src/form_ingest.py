@@ -8,12 +8,14 @@ Variáveis de ambiente necessárias (.env):
     TYPEFORM_FORM_ID = ID do formulário (aparece na URL do form)
 
 Refs dos campos no Typeform (ajuste no .env conforme o que você configurou):
-    FIELD_NOME      = ref do campo Nome      (default: "nome")
-    FIELD_EMAIL     = ref do campo Email     (default: "email")
-    FIELD_ASSUNTO   = ref do campo Assunto   (default: "assunto")
-    FIELD_MENSAGEM  = ref do campo Mensagem  (default: "mensagem")
+
+    FIELD_NAME    = ref do campo Name    (default: 'name')
+    FIELD_EMAIL   = ref do campo Email   (default: 'email')
+    FIELD_SUBJECT = ref do campo Subject (default: 'subject')
+    FIELD_MESSAGE = ref do campo Message (default: 'message')
 
 Execução:
+
     python src/form_ingest.py
     python src/form_ingest.py --max 200
     python src/form_ingest.py --reset-cursor   # reingere tudo desde o início
@@ -32,7 +34,7 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 load_dotenv()
 
-# --- configuração ---
+# --- setando as configurações ---
 STAGING = Path('data/staging/email')
 CURSOR_FILE = Path('data/staging/.typeform_cursor')   # guarda o token da última resposta processada
 STAGING.mkdir(parents=True, exist_ok=True)
@@ -48,7 +50,7 @@ FIELD_MESSAGE = os.getenv('FIELD_MESSAGE', 'message')
 
 BASE_URL = 'https://api.typeform.com'
 
-# --- helpers ---
+# --- criando funções de apoio ---
 def get_answer(answers: list, field_ref: str) -> str:
     '''
     Extrai o valor de uma resposta pelo ref do campo.
@@ -180,13 +182,13 @@ def ingest(max_responses: int = 100, reset_cursor: bool = False):
 
     print(f'Ingestão concluída: {ingested} resposta(s) salvas em {STAGING}')
 
-# --- CLI ---
+# --- cli ---
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Ingere respostas do Typeform para o pipeline NLP.'
     )
     parser.add_argument('--max', type=int, default=100,  
-                       help='máximo de respostas por execução (default: 100)')
+                        help='máximo de respostas por execução (default: 100)')
     parser.add_argument('--reset-cursor', action='store_true',               
                         help='ignora o cursor e reingere tudo desde o início')
     args = parser.parse_args()

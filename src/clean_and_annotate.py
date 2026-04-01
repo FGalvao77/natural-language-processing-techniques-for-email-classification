@@ -11,6 +11,7 @@ def main(in_path=IN, out_path=OUT):
     df = pd.read_csv(in_path, dtype=str)
     df['subject'] = df['subject'].fillna('')
     df['text'] = df['text'].fillna('')
+    
     # combina assunto + corpo para enriquecer o contexto NLP
     combined = (df['subject'] + '. ' + df['text']).astype(str).tolist()
     df['text_clean'] = batch_preprocess(combined)

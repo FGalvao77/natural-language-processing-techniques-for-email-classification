@@ -25,9 +25,11 @@ def extract_entities(nlp, text):
 def main(in_csv='data/unified_clean.csv', out_csv=OUT):
     df = pd.read_csv(in_csv)
     sentiment = load_models()
-    df['text_clean'] = df.get('text_clean', df['text'])
+    df['text_clean'] = df.get('text_clean', df['text']).fillna('')
+
     preds_sent = sentiment.predict(df['text_clean'].tolist())
     probs_sent = sentiment.predict_proba(df['text_clean'].tolist())
+    
     df['sentiment'] = preds_sent
     df['sentiment_scores'] = [dict(zip(sentiment.classes_, p)) for p in probs_sent]
     df.to_csv(out_csv, index=False)

@@ -14,7 +14,7 @@ def load_all_staging():
     rows = []
     for p in STAGING.glob('*.csv'):
         try:
-            df_email = pd.read_csv(data=p, dtype=str)
+            df_email = pd.read_csv(p, dtype=str)
             if df_email.empty:
                 continue
             for _, row in df_email.iterrows():
@@ -38,7 +38,7 @@ def deduplicate(df):
 
 def main():
     rows = load_all_staging()
-    df = pd.DataFrame(data=rows)
+    df = pd.DataFrame(rows)
     if df.empty:
         print('nenhuma mensagem no staging.')
         return

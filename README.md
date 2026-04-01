@@ -1,319 +1,148 @@
-# Natural Language Processing Techniques for E-mail Classification
+# 📧 AI-Powered Email Triage & Automation Pipeline
 
-Pipeline de NLP para triagem automática de mensagens recebidas via `Typeform`. 
-O sistema coleta respostas, classifica sentimento, atribui prioridade, gera rascunhos de resposta com _LLM_ e entrega um resumo estruturado no Slack — tudo de forma automática via **GitHub Actions**.
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
+[![Pandas](https://img.shields.io/badge/Pandas-1.5%2B-150458.svg?style=flat&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+[![NLP](https://img.shields.io/badge/NLP-spaCy%20%7C%20scikit--learn-green.svg)](https://spacy.io/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991.svg?style=flat&logo=openai&logoColor=white)](https://openai.com/)
+[![Slack](https://img.shields.io/badge/Slack-Integration-4A154B.svg?style=flat&logo=slack&logoColor=white)](https://slack.com/)
+[![UV](https://img.shields.io/badge/Package%20Manager-uv-de5b43.svg?style=flat&logo=python&logoColor=white)](https://github.com/astral-sh/uv)
+[![CI/CD](https://img.shields.io/badge/Automation-GitHub%20Actions-2088FF.svg?style=flat&logo=github-actions&logoColor=white)](https://github.com/features/actions)
 
----
-
-## Visão geral
-
-```
-Typeform → Ingestão → Merge → Limpeza NLP → Treinamento → Predição → Priorização → LLM Replies → Slack
-```
-
-| Etapa | Script | Entrada | Saída |
-|---|---|---|---|
-| 1. Ingestão | `form_ingest.py` | API Typeform | `data/staging/email/*.csv` |
-| 2. Merge | `merge_messages.py` | `data/staging/email/` | `data/unified_inbox.csv` |
-| 3. Limpeza | `clean_and_annotate.py` | `unified_inbox.csv` | `data/unified_clean.csv` |
-| 4. Treinamento | `train_sentiment.py` | `unified_clean.csv` | `models/sentiment.joblib` |
-| 5. Predição | `predict.py` | `unified_clean.csv` | `data/final_triage.csv` |
-| 6. Priorização | `postprocessing.py` | `final_triage.csv` | `data/final_triage_enriched.csv` |
-| 7. Respostas LLM | `llm_generate_replies.py` | `final_triage_enriched.csv` | `data/llm_replies.csv` |
-| 8. Slack | `send_to_slack_bot.py` | `llm_replies.csv` | mensagens no Slack |
+Uma solução completa de Engenharia de Dados e NLP para automação de atendimento ao cliente. Este pipeline transforma mensagens brutas recebidas via Typeform em ações estruturadas, classificando sentimentos, priorizando casos críticos e gerando rascunhos de resposta inteligentes via LLM, com entrega final integrada ao Slack.
 
 ---
 
-## Estrutura do projeto
+## 🎯 Escopo do Projeto
 
-```
-.
-├── .github/
-│   └── workflows/
-│       └── daily_pipeline.yml   # execução diária automática (08:00 UTC)
-├── data/
-│   ├── staging/
-│   │   ├── email/               # CSVs brutos por resposta do Typeform
-│   │   └── .typeform_cursor     # cursor de paginação (último response_id processado)
-│   ├── unified_inbox.csv        # todas as mensagens unificadas
-│   ├── unified_clean.csv        # mensagens pré-processadas pelo NLP
-│   ├── final_triage.csv         # mensagens + sentimento previsto
-│   ├── final_triage_enriched.csv# mensagens + prioridade + alertas
-│   └── llm_replies.csv          # mensagens + rascunhos de resposta
-├── models/
-│   ├── sentiment.joblib         # modelo TF-IDF + Regressão Logística
-│   └── type.joblib              # (reservado para classificação de tipo)
-├── src/
-│   ├── preprocessing.py         # normalização, remoção de ruído, lemmatização (spaCy)
-│   ├── form_ingest.py           # coleta respostas do Typeform com paginação por cursor
-│   ├── merge_messages.py        # consolida staging em unified_inbox.csv
-│   ├── clean_and_annotate.py    # aplica preprocessing e salva unified_clean.csv
-│   ├── train_sentiment.py       # treina o classificador de sentimento
-│   ├── predict.py               # aplica o modelo e grava final_triage.csv
-│   ├── postprocessing.py        # regras de negócio: prioridade e alertas
-│   ├── llm_generate_replies.py  # gera rascunhos via OpenAI GPT (paralelo)
-│   └── send_to_slack_bot.py     # envia mensagens estruturadas ao Slack
-├── requirements.txt
-└── .env                         # variáveis locais (não versionar)
+### O Problema
+Empresas com alto volume de interações enfrentam gargalos no atendimento inicial. Mensagens críticas (ameaças de cancelamento, riscos jurídicos ou reclamações de alto valor) muitas vezes ficam perdidas em caixas de entrada genéricas, resultando em:
+- **Churn elevado** por demora na resposta de clientes insatisfeitos.
+- **Riscos operacionais** ao não identificar menções ao Procon ou ações judiciais em tempo real.
+- **Inconsistência** nas respostas enviadas por diferentes atendentes.
+
+### A Solução
+Desenvolvi um pipeline automatizado que atua como uma **camada de inteligência prévia** ao atendimento humano. O sistema utiliza técnicas avançadas de Processamento de Linguagem Natural (NLP) e Modelos de Linguagem de Larga Escala (LLMs) para:
+1. **Ingestão Inteligente:** Coleta incremental de dados via API, garantindo que nenhuma mensagem seja processada duas vezes.
+2. **Classificação de Sentimento:** Um modelo de Machine Learning (TF-IDF + Logistic Regression) treinado para identificar tons positivos, neutros e negativos.
+3. **Análise de Prioridade Baseada em Regras e Entidades:** Extração de valores monetários e prazos para elevar a prioridade de tickets de alto impacto.
+4. **Respostas Contextuais:** Geração de rascunhos personalizados que respeitam o tom de voz da empresa e as diretrizes da LGPD.
+5. **Observabilidade em Tempo Real:** Notificações estruturadas no Slack para que a equipe de CS (Customer Success) possa agir imediatamente nos casos de "Alta Prioridade".
+
+---
+
+## 🏗️ Arquitetura do Sistema
+
+```mermaid
+graph LR
+    A[Typeform API] --> B[Ingestão & Merge]
+    B --> C[Limpeza NLP spaCy]
+    C --> D[ML Sentiment Analysis]
+    D --> E[Enriquecimento & Priorização]
+    E --> F[OpenAI GPT-4o-mini]
+    F --> G[Slack Notification]
 ```
 
 ---
 
-## Requisitos
+## 🛠️ Stack Tecnológica
 
-- Python 3.11+
-- Conta Typeform com Personal Access Token
-- Chave de API OpenAI
-- Bot do Slack com permissão `chat:write`
+| Camada | Ferramentas |
+|---|---|
+| **Linguagem & Gestão** | Python 3.11+, [uv](https://github.com/astral-sh/uv) |
+| **NLP & Machine Learning** | scikit-learn, spaCy (`pt_core_news_sm`), pandas |
+| **LLM & Generative AI** | OpenAI API (GPT-4o-mini) |
+| **Integrações** | Typeform API, Slack SDK |
+| **Automação (M LOps)** | GitHub Actions |
 
 ---
 
-## Instalação
+## 🚀 Configuração do Ambiente
 
+Este projeto utiliza o [uv](https://github.com/astral-sh/uv), um gerenciador de pacotes Python extremamente rápido, para garantir um ambiente determinístico e eficiente.
+
+### 1. Requisitos Prévios
+- Python 3.11 ou superior.
+- Instale o `uv`:
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+
+### 2. Instalação e Setup
+Clone o repositório e configure o ambiente com um único comando:
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m spacy download pt_core_news_sm
+# Cria o ambiente virtual e instala dependências
+uv sync
+
+# Ativa o ambiente
+source .venv/bin/activate  # Linux/macOS
+# ou
+.venv\Scripts\activate     # Windows
+
+# Baixa o modelo de linguagem do spaCy
+uv run python -m spacy download pt_core_news_sm
 ```
 
----
-
-## Configuração
-
-Crie o arquivo `.env` na raiz do projeto com as variáveis abaixo:
-
+### 3. Variáveis de Ambiente
+Crie um arquivo `.env` na raiz do projeto:
 ```env
-# Typeform
-TYPEFORM_TOKEN=tfp_...          # Personal Access Token (admin.typeform.com/account#/section/tokens)
-TYPEFORM_FORM_ID=XXXXXXXX       # ID do formulário (aparece na URL do form)
+# Typeform Config
+TYPEFORM_TOKEN=tfp_...
+TYPEFORM_FORM_ID=...
 
-# Refs dos campos no Typeform (ajuste conforme o seu form)
-FIELD_NOME=nome
-FIELD_EMAIL=email
-FIELD_ASSUNTO=assunto
-FIELD_MENSAGEM=mensagem
-
-# OpenAI
+# OpenAI Config
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o-mini        # opcional; padrão: gpt-4o-mini
+OPENAI_MODEL=gpt-4o-mini
 
-# Slack
+# Slack Config
 SLACK_BOT_TOKEN=xoxb-...
-SLACK_CHANNEL_ID=C0XXXXXXXXX
+SLACK_CHANNEL_ID=...
 ```
-
-Para uso no GitHub Actions, cadastre cada variável acima como **Secret** em
-`Settings → Secrets and variables → Actions`.
 
 ---
 
-## Executando a pipeline localmente
+## 📈 Pipeline de Execução
 
-Execute cada etapa na ordem ou rode o pipeline completo:
+Você pode executar o pipeline completo sequencialmente utilizando o `uv run`:
 
 ```bash
-# 1. Ingestão
-python src/form_ingest.py
+# Ingestão e Preparação
+uv run src/form_ingest.py
+uv run src/merge_messages.py
 
-# 2. Merge
-python src/merge_messages.py
+# Processamento NLP e ML
+uv run src/clean_and_annotate.py
+uv run src/train_sentiment.py --data data/unified_clean.csv --out models/sentiment.joblib
+uv run src/predict.py
 
-# 3. Limpeza
-PYTHONPATH=src python src/clean_and_annotate.py
-
-# 4. Treinamento
-python src/train_sentiment.py --data data/unified_clean.csv --out models/sentiment.joblib
-
-# 5. Predição
-PYTHONPATH=src python src/predict.py
-
-# 6. Priorização
-python src/postprocessing.py
-
-# 7. Respostas LLM
-python src/llm_generate_replies.py
-
-# 8. Envio ao Slack (dry run para testar sem enviar)
-python src/send_to_slack_bot.py --dry
+# Pós-processamento e Entrega
+uv run src/postprocessing.py
+uv run src/llm_generate_replies.py
+uv run src/send_to_slack_bot.py
 ```
 
 ---
 
-## Detalhes de cada módulo
+## ⚙️ CI/CD & Automação
 
-### `form_ingest.py` — Ingestão Typeform
-
-Consulta a API do Typeform e salva cada resposta como um CSV individual em `data/staging/email/`. Utiliza um cursor persistido em `data/staging/.typeform_cursor` para processar apenas respostas novas a cada execução.
-
-```bash
-python src/form_ingest.py                 # busca respostas novas
-python src/form_ingest.py --max 200       # limita a 200 respostas
-python src/form_ingest.py --reset-cursor  # reinicia do zero (reingere tudo)
-```
-
-**Schema do CSV gerado:**
-
-| Coluna | Descrição |
-|---|---|
-| `id` | `form-{response_id}` |
-| `channel` | `formulario` |
-| `from` | `Nome <email>` |
-| `subject` | Campo "Assunto" do form |
-| `text` | `assunto: mensagem` (texto principal para NLP) |
-| `received_at` | Timestamp de envio (ISO 8601) |
-| `message_id` | E-mail do remetente |
+O projeto conta com um workflow do **GitHub Actions** (`daily_pipeline.yml`) que orquestra a execução completa diariamente. Ele garante que:
+- O ambiente seja reconstruído de forma limpa.
+- O modelo de sentimento seja revalidado.
+- As mensagens do dia sejam processadas e enviadas ao Slack automaticamente às 05:00 BRT.
 
 ---
 
-### `preprocessing.py` — Pré-processamento NLP
+## 🧠 Detalhes Técnicos de NLP
 
-Funções de limpeza de texto usando spaCy (`pt_core_news_sm`):
-
-- Normalização Unicode (NFKC)
-- Remoção de URLs, e-mails, tags HTML e separadores
-- Lowercase
-- Remoção de stopwords
-- Lematização
-
-```python
-from preprocessing import preprocess_text, batch_preprocess
-
-preprocess_text("Favor enviar o contrato para fulano@example.com até 10/03.")
-# → "favor enviar contrato prazo"
-```
+- **Pré-processamento:** Limpeza profunda envolvendo normalização Unicode, remoção de stop-words customizadas e lematização para reduzir a dimensionalidade do vocabulário.
+- **Modelo de Sentimento:** Pipeline `TfidfVectorizer` (unigramas e bigramas) com `LogisticRegression` balanceada para lidar com datasets de feedback naturalmente desbalanceados.
+- **Extração de Entidades (NER):** Utilização do spaCy para identificar valores monetários e datas, permitindo automação de regras de negócio complexas (ex: priorizar reclamações > R$ 1.000).
 
 ---
 
-### `train_sentiment.py` — Treinamento do modelo
+## 👨‍💻 Autor
 
-Treina um classificador **TF-IDF (1-2 gramas) + Regressão Logística** com balanceamento de classes.
-
-**Labels:** `positivo`, `negativo`, `neutro`
-
-Se a coluna `label` não existir no CSV, o script infere automaticamente as labels por palavras-chave:
-
-- **Negativo:** `reclamação`, `defeito`, `problema`, `cancelamento`, `atraso`, `erro`, `devolução`...
-- **Positivo:** `elogio`, `satisfação`, `parabenizo`, `gostei`, `resolvido`...
-- **Neutro:** demais casos
-
-```bash
-python src/train_sentiment.py --data data/unified_clean.csv --out models/sentiment.joblib
-```
-
-O modelo serializado é salvo com `joblib` em `models/sentiment.joblib`.
+**Fernando Galvão**
+Engenheiro de Dados | Especialista em Automação e IA
 
 ---
-
-### `postprocessing.py` — Priorização e alertas
-
-Aplica regras de negócio sobre o resultado da predição para determinar prioridade e categoria de alerta:
-
-| Condição | Prioridade | Alerta |
-|---|---|---|
-| Menciona cancelamento/rescisão | Alta | `possivel_cancelamento` |
-| Menciona Procon/advogado/ação judicial | Alta | `legal_risk` |
-| Sentimento negativo + valor ≥ R$1.000 | Alta | `cliente_risco_valor` |
-| Sentimento negativo + data/prazo mencionado | Alta | `prazo_proximo` |
-| Sentimento negativo (demais) | Média | `insatisfeito` |
-| Sentimento neutro ou positivo | Baixa | — |
-
----
-
-### `llm_generate_replies.py` — Geração de respostas com LLM
-
-Gera rascunhos de resposta em português para cada mensagem usando a API OpenAI (GPT-4o-mini por padrão). Executa em paralelo com `ThreadPoolExecutor` e suporta retomada de progresso.
-
-**Colunas geradas:**
-
-| Coluna | Descrição |
-|---|---|
-| `reply_subject` | Assunto sugerido para a resposta |
-| `reply_body` | Corpo da resposta (≤ 200 palavras, tom empático e formal) |
-| `reply_explain` | Justificativa do modelo (para revisão humana) |
-
-```bash
-python src/llm_generate_replies.py --workers 20   # 20 chamadas paralelas
-python src/llm_generate_replies.py --dry-run      # simula sem chamar a API
-```
-
----
-
-### `send_to_slack_bot.py` — Envio ao Slack
-
-Lê `data/llm_replies.csv` e publica cada mensagem como bloco Slack estruturado com:
-
-- Cabeçalho com emoji de prioridade e alerta
-- Metadados do e-mail (remetente, assunto, data)
-- Preview da mensagem original
-- Rascunho de resposta gerado pelo LLM
-- Raciocínio do modelo (contextual)
-
-```bash
-python src/send_to_slack_bot.py                    # envia tudo
-python src/send_to_slack_bot.py --limit 5 --dry    # testa sem enviar
-python src/send_to_slack_bot.py --delay 1.5        # ajusta intervalo entre mensagens
-```
-
----
-
-## Automação — GitHub Actions
-
-O workflow `.github/workflows/daily_pipeline.yml` executa a pipeline completa **todos os dias às 08:00 UTC** (05:00 BRT). Pode ser acionado manualmente via `workflow_dispatch`.
-
-**Etapas do workflow:**
-
-1. Checkout do repositório
-2. Setup Python 3.11 + cache de pip
-3. Instalação de dependências
-4. Download do modelo spaCy (`pt_core_news_sm`)
-5. Validação das credenciais Typeform (verifica HTTP 200 na API)
-6. Execução sequencial das 8 etapas da pipeline
-
-**Secrets necessários no repositório:**
-
-```
-TYPEFORM_TOKEN
-TYPEFORM_FORM_ID
-FIELD_NOME
-FIELD_EMAIL
-FIELD_ASSUNTO
-FIELD_MENSAGEM
-OPENAI_API_KEY
-OPENAI_MODEL
-SLACK_BOT_TOKEN
-SLACK_CHANNEL_ID
-```
-
----
-
-## Stack tecnológica
-
-| Camada | Tecnologia |
-|---|---|
-| Linguagem | Python 3.11 |
-| NLP / ML | scikit-learn, spaCy (`pt_core_news_sm`) |
-| LLM | OpenAI API (GPT-4o-mini) |
-| Notificação | Slack SDK |
-| Ingestão | Typeform API |
-| Orquestração | GitHub Actions |
-| Dados | pandas, CSV |
-| Serialização de modelo | joblib |
-
----
-
-## Dependências principais
-
-```
-pandas, numpy, python-dotenv, requests, tqdm
-scikit-learn, joblib, spacy, dateparser
-slack-sdk, tenacity
-openai
-pytest
-```
-
-Instale com:
-
-```bash
-pip install -r requirements.txt
-```
+*Este projeto foi desenvolvido com foco em escalabilidade, manutenibilidade e impacto direto no ROI de operações de atendimento ao cliente.*
