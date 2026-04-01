@@ -1,148 +1,200 @@
 # src/form_ingest.py
+'''
+Ingestão de respostas do Typeform para o pipeline NLP.
+Substitui email_ingest_imap.py — grava no mesmo staging com o mesmo schema.
+
+Variáveis de ambiente necessárias (.env):
+    TYPEFORM_TOKEN   = Personal Access Token do Typeform
+    TYPEFORM_FORM_ID = ID do formulário (aparece na URL do form)
+
+Refs dos campos no Typeform (ajuste no .env conforme o que você configurou):
+    FIELD_NOME      = ref do campo Nome      (default: "nome")
+    FIELD_EMAIL     = ref do campo Email     (default: "email")
+    FIELD_ASSUNTO   = ref do campo Assunto   (default: "assunto")
+    FIELD_MENSAGEM  = ref do campo Mensagem  (default: "mensagem")
+
+Execução:
+    python src/form_ingest.py
+    python src/form_ingest.py --max 200
+    python src/form_ingest.py --reset-cursor   # reingere tudo desde o início
+'''
+
+# --- importando as bibliotecas e os módulos necessários ---
 import os
 import uuid
 import argparse
 import requests
 import pandas as pd
-import logging
+
 from pathlib import Path
 from datetime import datetime, timezone
-from tenacity import retry, stop_after_attempt, wait_exponential
+
 from dotenv import load_dotenv
-
-from src.schemas import RawMessage
-
 load_dotenv()
 
-# --- Configurações de Logging ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("TypeformIngest")
-
-# --- Configurações de Ambiente ---
+# --- configuração ---
 STAGING = Path('data/staging/email')
-CURSOR_FILE = Path('data/staging/.typeform_cursor')
+CURSOR_FILE = Path('data/staging/.typeform_cursor')   # guarda o token da última resposta processada
 STAGING.mkdir(parents=True, exist_ok=True)
 
 TOKEN = os.getenv('TYPEFORM_TOKEN')
 FORM_ID = os.getenv('TYPEFORM_FORM_ID')
+
+# refs dos campos — devem bater com o que está configurado no painel do Typeform
+FIELD_NAME = os.getenv('FIELD_NAME', 'name')
+FIELD_EMAIL = os.getenv('FIELD_EMAIL', 'email')
+FIELD_SUBJECT = os.getenv('FIELD_SUBJECT', 'subject')
+FIELD_MESSAGE = os.getenv('FIELD_MESSAGE', 'message')
+
 BASE_URL = 'https://api.typeform.com'
 
-# --- Keywords para Auto-Mapeamento (Heurística de Engenharia de Dados) ---
-KEYWORDS = {
-    'name': ['nome', 'name', 'quem é você', 'contato'],
-    'email': ['email', 'e-mail', 'seu melhor email'],
-    'subject': ['assunto', 'subject', 'o que se trata'],
-    'message': ['mensagem', 'message', 'texto', 'comentário', 'descreva']
-}
-
-def get_answer_value(ans: dict) -> str:
-    ans_type = ans.get('type', '')
-    if ans_type in ['text', 'email', 'number']:
-        return str(ans.get(ans_type, ''))
-    elif ans_type == 'choice':
-        return str(ans.get('choice', {}).get('label', ''))
-    elif ans_type == 'choices':
-        return ', '.join(ans.get('choices', {}).get('labels', []))
-    return str(ans.get(ans_type, ''))
-
-def get_field_mapping(fields: list) -> dict:
-    '''Cruza as definições do Typeform com as Keywords e Refs.'''
-    mapping = {}
-    logger.info("Detectando campos no formulário...")
-    for f in fields:
-        f_id = f.get('id')
-        f_ref = f.get('ref', '').lower()
-        f_title = f.get('title', '').lower()
-        
-        # Tenta mapear o papel do campo (ex: se é o campo de email)
-        detected_role = None
-        for role, keywords in KEYWORDS.items():
-            if f_ref in keywords or any(k in f_title for k in keywords):
-                detected_role = role
-                break
-        
-        if detected_role:
-            mapping[f_id] = detected_role
-            logger.info(f"-> Mapeado ID {f_id} como '{detected_role}' (Título: '{f_title}')")
+# --- helpers ---
+def get_answer(answers: list, field_ref: str) -> str:
+    '''
+    Extrai o valor de uma resposta pelo ref do campo.
+    '''
+    for ans in answers:
+        if ans.get('field', {}).get('ref') != field_ref:
+            continue
+        ans_type = ans.get('type', '')
+        if ans_type == 'text':
+            return ans.get('text', '')
+        elif ans_type == 'choice':
+            return ans.get('choice', {}).get('label', '')
+        elif ans_type == 'choices':
+            labels = ans.get('choices', {}).get('labels', [])
+            return ', '.join(labels)
+        elif ans_type == 'email':
+            return ans.get('email', '')
+        elif ans_type == 'number':
+            return str(ans.get('number', ''))
         else:
-            logger.warning(f"-> Campo ignorado ou não mapeado: {f_title}")
-    
-    return mapping
+            return str(ans.get(ans_type, ''))
+    return ''
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-def fetch_data(url, params=None):
-    headers = {'Authorization': f'Bearer {TOKEN}'}
-    resp = requests.get(url, headers=headers, params=params, timeout=30)
+def load_cursor() -> str | None:
+    '''
+    Carrega o response_id da última resposta processada (cursor de paginação).
+    '''
+    if CURSOR_FILE.exists():
+        val = CURSOR_FILE.read_text().strip()
+        return val or None
+    return None
+
+def save_cursor(response_id: str):
+    CURSOR_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CURSOR_FILE.write_text(response_id)
+
+def fetch_responses(after_token: str = None, page_size: int = 100) -> dict:
+    '''
+    Busca respostas do Typeform.
+    after_token: response_id da última resposta já processada (cursor).
+                 Typeform retorna apenas respostas DEPOIS desse token.
+    '''
+    if not TOKEN:
+        raise RuntimeError('Defina TYPEFORM_TOKEN no .env')
+    if not FORM_ID:
+        raise RuntimeError('Defina TYPEFORM_FORM_ID no .env')
+
+    params = {
+        'page_size': min(page_size, 1000),
+        'sort': 'submitted_at,asc',
+    }
+    if after_token:
+        params['after'] = after_token
+
+    resp = requests.get(
+        f'{BASE_URL}/forms/{FORM_ID}/responses',
+        headers={'Authorization': f'Bearer {TOKEN}'},
+        params=params,
+        timeout=30,
+    )
+    if resp.status_code == 401:
+        raise RuntimeError(
+            'TYPEFORM_TOKEN inválido ou expirado (401). '
+            'Gere um novo token em https://admin.typeform.com/account#/section/tokens '
+            'e atualize o secret TYPEFORM_TOKEN no repositório.'
+        )
     resp.raise_for_status()
     return resp.json()
 
+# --- ingestão principal ---
 def ingest(max_responses: int = 100, reset_cursor: bool = False):
-    try:
-        # 1. Carrega Mapa de Definição
-        form_def = fetch_data(f'{BASE_URL}/forms/{FORM_ID}')
-        field_map = get_field_mapping(form_def.get('fields', []))
-        
-        # 2. Busca Respostas
-        after = None if reset_cursor else (CURSOR_FILE.read_text().strip() if CURSOR_FILE.exists() else None)
-        params = {'page_size': max_responses, 'sort': 'submitted_at,asc'}
-        if after: params['after'] = after
-        
-        data = fetch_data(f'{BASE_URL}/forms/{FORM_ID}/responses', params=params)
-        items = data.get('items', [])
+    after = None if reset_cursor else load_cursor()
 
-        if not items:
-            logger.info('Sem novas respostas.')
-            return
+    if reset_cursor:
+        print('Cursor resetado — reingerindo todas as respostas.')
+    elif after:
+        print(f'Buscando respostas após o token: {after}')
+    else:
+        print('Primeira execução — buscando todas as respostas disponíveis.')
 
-        ingested = 0
-        last_token = None
+    data  = fetch_responses(after_token=after, page_size=max_responses)
+    items = data.get('items', [])
+    total = data.get('total_items', len(items))
 
-        for item in items:
-            response_id = item.get('response_id')
+    if not items:
+        print('Nenhuma resposta nova encontrada.')
+        return
+
+    print(f'{len(items)} resposta(s) encontrada(s) (total no form: {total})')
+
+    ingested = 0
+    last_token = None
+
+    for item in items:
+        try:
+            response_id = item.get('response_id', str(uuid.uuid4()))
+            submitted_at = item.get('submitted_at', 
+                                    datetime.now(timezone.utc).isoformat())
             answers = item.get('answers', [])
-            
-            # Dicionário temporário para extração
-            extracted = {'id': response_id, 'received_at': item.get('submitted_at')}
-            
-            for ans in answers:
-                f_id = ans.get('field', {}).get('id')
-                role = field_map.get(f_id)
-                if role:
-                    extracted[role] = get_answer_value(ans)
 
-            # Prepara texto para NLP
-            subject = extracted.get('subject', 'Sem Assunto')
-            message = extracted.get('message', '')
-            text = f'{subject}: {message}'.strip() if subject and message else (message or subject or '')
+            name = get_answer(answers, FIELD_NAME)
+            email = get_answer(answers, FIELD_EMAIL)
+            subject  = get_answer(answers, FIELD_SUBJECT)
+            message = get_answer(answers, FIELD_MESSAGE)
 
-            # Valida com Pydantic (Garante Qualidade Bronze)
-            msg = RawMessage(
-                id=f"form-{response_id}",
-                from_name=extracted.get('name'),
-                from_email=extracted.get('email'),
-                subject=subject,
-                text=text,
-                received_at=extracted.get('received_at'),
-                message_id=extracted.get('email') or response_id
-            )
+            # texto principal para o NLP — junta assunto + mensagem
+            text = f'{subject}: {message}'.strip() if message else subject
 
-            # Salva
+            row = {'id': f"form-{response_id}",
+                   'channel': 'formulario',
+                   'from': f'{name} <{email}>' if email else name,
+                   'to': '',
+                   'subject': subject,
+                   'text': text,
+                   'received_at': submitted_at,
+                   'message_id': email}        # email fica em message_id
+
             fname = STAGING / f'form-{response_id}.csv'
-            pd.DataFrame([msg.to_row()]).to_csv(fname, index=False)
+            pd.DataFrame([row]).to_csv(fname, index=False, encoding='utf-8')
             ingested += 1
             last_token = response_id
 
-        if last_token:
-            CURSOR_FILE.write_text(last_token)
+        except Exception as e:
+            print(f"  Erro na resposta {item.get('response_id', '?')}: {e}")
+            continue
 
-        logger.info(f'Ingestão concluída. {ingested} arquivos salvos.')
+    if last_token:
+        save_cursor(last_token)
 
-    except Exception as e:
-        logger.error(f'Erro fatal na ingestão: {e}')
+    print(f'Ingestão concluída: {ingested} resposta(s) salvas em {STAGING}')
 
+# --- CLI ---
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--max', type=int, default=100)
-    parser.add_argument('--reset-cursor', action='store_true')
+    parser = argparse.ArgumentParser(
+        description='Ingere respostas do Typeform para o pipeline NLP.'
+    )
+    parser.add_argument('--max', type=int, default=100,  
+                       help='máximo de respostas por execução (default: 100)')
+    parser.add_argument('--reset-cursor', action='store_true',               
+                        help='ignora o cursor e reingere tudo desde o início')
     args = parser.parse_args()
+
     ingest(max_responses=args.max, reset_cursor=args.reset_cursor)
+
+
+
+
+
+    
