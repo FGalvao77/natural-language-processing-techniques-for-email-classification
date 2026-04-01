@@ -1,6 +1,7 @@
-# NLP Email Classifier
+# Natural language processing techniques for email classification
 
-Pipeline de NLP para triagem automática de mensagens recebidas via Typeform. O sistema coleta respostas, classifica sentimento, atribui prioridade, gera rascunhos de resposta com LLM e entrega um resumo estruturado no Slack — tudo de forma automática via GitHub Actions.
+Pipeline de NLP para triagem automática de mensagens recebidas via `Typeform`. 
+O sistema coleta respostas, classifica sentimento, atribui prioridade, gera rascunhos de resposta com _LLM_ e entrega um resumo estruturado no Slack — tudo de forma automática via **GitHub Actions**.
 
 ---
 
