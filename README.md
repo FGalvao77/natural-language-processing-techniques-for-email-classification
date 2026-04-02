@@ -109,18 +109,18 @@ Você pode executar o pipeline completo sequencialmente utilizando o `uv run`:
 
 ```bash
 # Ingestão e Preparação
-python src/form_ingest.py --reset-cursor # resetando a ingestão de dados
-python src/merge_messages.py
+uv run python src/form_ingest.py --reset-cursor # resetando a ingestão de dados
+uv run python src/merge_messages.py
 
 # Processamento NLP e ML
-python src/clean_and_annotate.py
-python src/train_sentiment.py --data data/unified_clean.csv --out models/sentiment.joblib
-python src/predict.py
+uv run python src/clean_and_annotate.py
+uv run python src/train_sentiment.py --data data/unified_clean.csv --out models/sentiment.joblib
+uv run python src/predict.py
 
 # Pós-processamento e Entrega
-python src/postprocessing.py
-python src/llm_generate_replies.py
-python src/send_to_slack_bot.py --limit 10 # inserindo dados com limite de 10
+uv run python src/postprocessing.py
+uv run python src/llm_generate_replies.py
+uv run python src/send_to_slack_bot.py --limit 10 # inserindo dados com limite de 10
 ```
 
 ---

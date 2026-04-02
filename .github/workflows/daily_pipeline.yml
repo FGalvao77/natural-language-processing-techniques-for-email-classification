@@ -121,4 +121,4 @@ jobs:
         run: uv run python src/llm_generate_replies.py
 
       - name: "8. Notificação via Slack Bot (Entrega)"
-        run: uv run python src/send_to_slack_bot.py --limit 10
+        run: uv run python src/send_to_slack_bot.py
