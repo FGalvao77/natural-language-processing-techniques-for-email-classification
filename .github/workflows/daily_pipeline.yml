@@ -83,34 +83,33 @@ jobs:
             uv run python src/form_ingest.py
           fi
 
-      - name: "2. Consolidação de Mensagens"
+      - name: "2. Consolidação de Mensagens (Merge)"
         run: uv run python src/merge_messages.py
 
-      - name: "3. Limpeza e Anotação de Texto"
+      - name: "3. Limpeza e Anotação de Texto (NLP)"
         run: |
           PYTHONPATH=src uv run python src/clean_and_annotate.py
           if [ ! -s data/unified_clean.csv ]; then
-            echo "Nenhum dado novo encontrado. Encerrando pipeline prematuramente."
+            echo "Nenhum dado novo encontrado. Encerrando pipeline."
             exit 0
           fi
-          # Adicionalmente, verifica se o CSV tem apenas o cabeçalho
           ROWS=$(tail -n +2 data/unified_clean.csv | wc -l)
           if [ "$ROWS" -eq 0 ]; then
-            echo "Nenhum registro nos dados consolidados. Encerrando pipeline prematuramente."
+            echo "Dados consolidados vazios. Encerrando pipeline."
             exit 0
           fi
 
-      - name: "4. Ajuste do Modelo de Sentimento"
+      - name: "4. Ajuste do Modelo de Sentimento (ML Train)"
         run: uv run python src/train_sentiment.py --data data/unified_clean.csv --out models/sentiment.joblib
 
-      - name: "5. Predição de Sentimento"
+      - name: "5. Predição de Sentimento (Inference)"
         run: PYTHONPATH=src uv run python src/predict.py
 
-      - name: "6. Priorização e Pós-processamento"
+      - name: "6. Pós-processamento e Priorização"
         run: uv run python src/postprocessing.py
 
-      - name: "7. Geração de Respostas (LLM)"
+      - name: "7. Geração de Respostas Inteligentes (LLM)"
         run: uv run python src/llm_generate_replies.py
 
-      - name: "8. Notificação via Slack Bot"
-        run: uv run python src/send_to_slack_bot.py
+      - name: "8. Notificação via Slack Bot (Entrega)"
+        run: uv run python src/send_to_slack_bot.py --limit 10
