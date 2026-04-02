@@ -51,7 +51,23 @@ def determine_priority(row):
     return 'baixa', ''
 
 def main(in_path=IN, out_path=OUT):
+    if not Path(in_path).exists():
+        print(f"[WARNING] Arquivo de entrada {in_path} não encontrado.")
+        return
+
     df = pd.read_csv(in_path)
+    
+    if df.empty:
+        print(f"[INFO] O dataframe de entrada {in_path} está vazio. Nenhuma pós-processamento necessário.")
+        df.to_csv(out_path, index=False)
+        return
+
+    # Garante que as colunas necessárias existam
+    if 'text' not in df.columns:
+        df['text'] = ''
+    if 'sentiment' not in df.columns:
+        df['sentiment'] = 'neutro'
+    
     df['text'] = df['text'].fillna('')
     df['sentiment'] = df['sentiment'].fillna('neutro')
     if 'entities' not in df.columns:
