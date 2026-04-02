@@ -70,11 +70,11 @@ def main(data_path, out_model):
     y = df['label'].astype(str).tolist()
 
     if not X:
-        print("[ERROR] Nenhum dado válido para treinamento após a limpeza.")
+        print("[INFO] Sem dados válidos para o ajuste após a limpeza. Pulando etapa.")
         return
 
     if len(X) < 10:
-        print(f"[WARNING] Poucos dados para treinamento ({len(X)} amostras).")
+        print(f"[WARNING] Volume de dados reduzido para ajuste ({len(X)} amostras).")
         # Se houver pouquíssimos dados, o split estratificado pode falhar.
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, 
                                                             random_state=42)
