@@ -46,10 +46,19 @@ jobs:
       - name: Download spaCy model
         run: uv run python -m spacy download pt_core_news_sm
 
-      - name: Create data directories
+      - name: "Create data directories"
         run: mkdir -p data/staging/email models
 
+      - name: "Cache Data & Cursor"
+        uses: actions/cache@v4
+        with:
+          path: data/
+          key: ${{ runner.os }}-data-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-data-
+
       - name: Validar TYPEFORM_TOKEN
+
         run: |
           if [ -z "$TYPEFORM_TOKEN" ]; then
             echo "ERRO: TYPEFORM_TOKEN está vazio!"; exit 1
