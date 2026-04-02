@@ -55,11 +55,20 @@ def load_data(path: str):
 def main(data_path, out_model):
     df = load_data(data_path)
     
-    # Remove qualquer nulo remanescente em label
+    # Limpeza final e rigorosa
     df = df.dropna(subset=['label', 'text_clean'])
+    
+    # Garante que text_clean é string e não contém nulos disfarçados
+    df['text_clean'] = df['text_clean'].astype(str).fillna('')
+    df = df[df['text_clean'].str.strip() != '']
+    df = df[df['text_clean'].str.lower() != 'nan']
 
-    X = df['text_clean'].astype(str).tolist()
+    X = df['text_clean'].tolist()
     y = df['label'].astype(str).tolist()
+
+    if not X:
+        print("[ERROR] Nenhum dado válido para treinamento após a limpeza.")
+        return
 
     if len(X) < 10:
         print(f"[WARNING] Poucos dados para treinamento ({len(X)} amostras).")
