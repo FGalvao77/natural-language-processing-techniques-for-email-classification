@@ -106,7 +106,7 @@ Você pode executar o pipeline completo sequencialmente utilizando o `uv run`:
 
 ```bash
 # Ingestão e Preparação
-uv run src/form_ingest.py
+uv run src/form_ingest.py --reset-cursor # resetando a ingestão de dados
 uv run src/merge_messages.py
 
 # Processamento NLP e ML
@@ -117,7 +117,7 @@ uv run src/predict.py
 # Pós-processamento e Entrega
 uv run src/postprocessing.py
 uv run src/llm_generate_replies.py
-uv run src/send_to_slack_bot.py
+uv run src/send_to_slack_bot.py --limit 10 # inserindo dados com limite de 10
 ```
 
 ---
