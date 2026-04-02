@@ -12,10 +12,11 @@ Usage:
 '''
 import os, argparse, json, threading
 import pandas as pd
+
 from tqdm import tqdm
-from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from dotenv import load_dotenv
 load_dotenv()
 
 try:
@@ -48,7 +49,7 @@ Metadados:
 Gere apenas o JSON válido sem texto adicional.
 '''
 
-def safe_parse_json(s):
+def safe_parse_json(s) -> object:
     s = s.strip()
     try:
         return json.loads(s)
@@ -62,7 +63,7 @@ def safe_parse_json(s):
                 return None
     return None
 
-def call_openai(prompt, model, api_key, max_tokens=512, temperature=0.2):
+def call_openai(prompt, model, api_key, max_tokens=512, temperature=0.2) -> object:
     if openai is None:
         raise RuntimeError('openai não instalado. Execute: pip install openai')
     # Compatível com openai v0.x e v1.x
@@ -95,7 +96,7 @@ def call_openai(prompt, model, api_key, max_tokens=512, temperature=0.2):
         )
         return resp['choices'][0]['message']['content']
 
-def process_row(idx, row, model, api_key):
+def process_row(idx, row, model, api_key) -> object:
     message = row.get('text') or row.get('text_clean') or ''
     sentiment = row.get('sentiment') or row.get('label') or ''
     email_type = row.get('type', '')
@@ -127,7 +128,7 @@ def process_row(idx, row, model, api_key):
 
     return idx, subj, body, explain
 
-def main(in_path, out_path, model, api_key, workers, batch):
+def main(in_path, out_path, model, api_key, workers, batch) -> object:
     df = pd.read_csv(in_path)
     if 'text' not in df.columns:
         raise RuntimeError(f"{in_path} precisa conter coluna 'text'.")

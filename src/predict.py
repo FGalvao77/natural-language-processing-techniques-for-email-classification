@@ -1,16 +1,17 @@
 # src/predict_pipeline.py
 import joblib
 import pandas as pd
+
 from pathlib import Path
 
 SENT_MODEL = 'models/sentiment.joblib'
 OUT = Path('data/final_triage.csv')
 
-def load_models():
+def load_models() -> object:
     sentiment = joblib.load(SENT_MODEL)
     return sentiment
 
-def extract_entities(nlp, text):
+def extract_entities(nlp, text) -> object:
     if not nlp:
         return []
     doc = nlp(text)
@@ -22,7 +23,7 @@ def extract_entities(nlp, text):
                      'end': ent.end_char})
     return ents
 
-def main(in_csv='data/unified_clean.csv', out_csv=OUT):
+def main(in_csv='data/unified_clean.csv', out_csv=OUT) -> object:
     if not Path(in_csv).exists():
         print(f"[WARNING] Arquivo de entrada {in_csv} não encontrado.")
         return

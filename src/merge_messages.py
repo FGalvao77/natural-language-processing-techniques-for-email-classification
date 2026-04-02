@@ -1,16 +1,18 @@
 # src/merge_messages.py
 from pathlib import Path
+
 import pandas as pd
 from datetime import datetime, UTC
 
 STAGING = Path('data/staging/email')
 OUT_CSV = Path('data/unified_inbox.csv')
+
 OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
 
 EXPECTED_COLS = ['id', 'channel', 'from', 'to', 'subject', 
                  'text', 'received_at', 'message_id']
 
-def load_all_staging():
+def load_all_staging() -> object:
     rows = []
     for p in STAGING.glob('*.csv'):
         try:
@@ -33,7 +35,7 @@ def load_all_staging():
             print('erro lendo', p, e)
     return rows
 
-def deduplicate(df):
+def deduplicate(df) -> object:
     return df.drop_duplicates(subset=['id'])
 
 def main():

@@ -145,7 +145,8 @@ O projeto conta com um workflow do **GitHub Actions** (`daily_pipeline.yml`) que
 ## 👨‍💻 Autor
 
 **Fernando Galvão**
-Engenheiro de Dados | Especialista em Automação e IA
+Engenheiro de Dados e Aprendizado de Máquina | Especialista em Automação e IA
+Data Engineer and Machine Learning | Automation and AI Specialist
 
 ---
 *Este projeto foi desenvolvido com foco em escalabilidade, manutenibilidade e impacto direto no ROI de operações de atendimento ao cliente.*

@@ -1,18 +1,19 @@
 # src/postprocessing.py
 import pandas as pd
 import json
+import re
+
 from pathlib import Path
 from dateparser import parse as date_parse
-import re
 
 IN = Path('data/final_triage.csv')
 OUT = Path('data/final_triage_enriched.csv')
 
 HIGH_VALUE_THRESHOLD = 1000.0
 CANCEL_WORDS = ['cancelar', 'cancelamento', 'rescisão', 'cancelei', 'quero cancelar']
-PROCON_WORDS = ['procon', 'advogado', 'ação judicial', 'processo', 'vou procurar os meus direitos']
+PROCON_WORDS = ['procon', 'advogado', 'ação judicial', 'processo', 'vou procurar', 'meus direitos']
 
-def determine_priority(row):
+def determine_priority(row) -> object:
     sentiment = str(row.get('sentiment') or 'neutro').lower()
     text = str(row.get('text') or '').lower()
     try:
@@ -50,7 +51,7 @@ def determine_priority(row):
         return 'baixa', ''
     return 'baixa', ''
 
-def main(in_path=IN, out_path=OUT):
+def main(in_path=IN, out_path=OUT) -> object:
     if not Path(in_path).exists():
         print(f"[WARNING] Arquivo de entrada {in_path} não encontrado.")
         return

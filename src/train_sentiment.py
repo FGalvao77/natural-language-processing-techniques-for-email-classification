@@ -3,6 +3,7 @@ import argparse
 import os
 import joblib
 import pandas as pd
+
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -13,6 +14,7 @@ _NEGATIVE_KEYWORDS = ['reclamação', 'defeito', 'incorreto', 'problema',
                       'cancelamento', 'promoção não aplicada', 'ruim', 
                       'insatisfeito', 'devolução', 'atraso', 'cobrança indevida', 
                       'erro', 'demora', 'atendimento ruim']
+
 _POSITIVE_KEYWORDS = ['parabenizo', 'positiva', 'agradável', 'gostei', 'elogio', 
                       'satisfação', 'correto', 'resolvido', 'promoção aplicada', 
                       'bom', 'satisfeito']
@@ -25,7 +27,7 @@ def _infer_label(subject: str) -> str:
         return 'positivo'
     return 'neutro'
 
-def load_data(path: str):
+def load_data(path: str) -> str:
     df = pd.read_csv(path)
 
     if 'label' not in df.columns and 'sentiment' in df.columns:
@@ -57,7 +59,7 @@ def load_data(path: str):
 
     return df
 
-def main(data_path, out_model):
+def main(data_path, out_model) -> object:
     df = load_data(data_path)
     
     # Limpeza final e rigorosa

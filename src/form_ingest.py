@@ -37,6 +37,7 @@ load_dotenv()
 # --- setando as configurações ---
 STAGING = Path('data/staging/email')
 CURSOR_FILE = Path('data/staging/.typeform_cursor')   # guarda o token da última resposta processada
+
 STAGING.mkdir(parents=True, exist_ok=True)
 
 TOKEN = os.getenv('TYPEFORM_TOKEN')

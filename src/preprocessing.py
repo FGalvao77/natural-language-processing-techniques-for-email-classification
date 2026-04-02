@@ -1,12 +1,12 @@
 # src/preprocessing.py
 import re
 import unicodedata
-from typing import List
 import spacy
 
+from typing import List
 from datetime import timedelta, datetime
 
-def add_business_days(start_date, num_days):
+def add_business_days(start_date, num_days) -> object:
     current_date = start_date
     business_days_added = 0
     while business_days_added < num_days:
@@ -36,7 +36,7 @@ def remove_noise(text: str) -> str:
 
 def clean_text(text: str) -> str:
     if not isinstance(text, str):
-        text = str(text or "")
+        text = str(text or '')
     text = normalize_unicode(text)
     text = text.lower()
     text = remove_noise(text)

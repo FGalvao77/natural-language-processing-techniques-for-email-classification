@@ -15,11 +15,11 @@ Uso:
 '''
 
 import os
+import pandas as pd
 import time
 import argparse
-from pathlib import Path
 
-import pandas as pd
+from pathlib import Path
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from tenacity import retry, wait_exponential, stop_after_attempt
@@ -174,11 +174,11 @@ def send_batch(df: pd.DataFrame, channel: str, limit=None, dry=False, delay=0.8)
 
         try:
             resp = _post(channel, blocks, fallback)
-            print(f"sent  id={_get(row,'id')}  ts={resp['ts']}")
+            print(f"sent >> id={_get(row,'id')} >> ts={resp['ts']}")
             sent += 1
             time.sleep(delay)
         except Exception as e:
-            print(f"failed  id={_get(row,'id')}  err={e}")
+            print(f"failed >> id={_get(row,'id')} >> err={e}")
 
     return sent
 
@@ -208,7 +208,6 @@ def main():
 
     n = send_batch(df, SLACK_CHANNEL, limit=args.limit, dry=args.dry, delay=args.delay)
     print(f'Concluído — mensagens enviadas: {n}')
-
 
 if __name__ == '__main__':
     main()
