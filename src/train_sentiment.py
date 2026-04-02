@@ -31,9 +31,21 @@ def load_data(path: str):
     if 'label' not in df.columns and 'sentiment' in df.columns:
         df = df.rename(columns={'sentiment': 'label'})
 
+    # Garante que a coluna de texto principal existe
+    if 'text_clean' not in df.columns:
+        if 'text' in df.columns:
+            df['text_clean'] = df['text']
+        else:
+            raise ValueError("O CSV deve conter pelo menos a coluna 'text' ou 'text_clean'.")
+
+    # Limpeza básica de nulos antes de inferir ou treinar
+    df = df.dropna(subset=['text_clean'])
+    df = df[df['text_clean'].str.strip() != '']
+
     if 'label' not in df.columns:
         print("[INFO] Coluna 'label' não encontrada. Inferindo a partir de text_clean...")
         df['label'] = df['text_clean'].apply(_infer_label)
+        # Salva o dataframe limpo e com labels
         df.to_csv(path, index=False)
         print(f"[INFO] CSV atualizado com coluna 'label' salvo em {path}")
         print(df['label'].value_counts().to_string())
@@ -42,16 +54,24 @@ def load_data(path: str):
 
 def main(data_path, out_model):
     df = load_data(data_path)
-    df['text_clean'] = df.get('text_clean', df['text'])
+    
+    # Remove qualquer nulo remanescente em label
+    df = df.dropna(subset=['label', 'text_clean'])
 
     X = df['text_clean'].astype(str).tolist()
     y = df['label'].astype(str).tolist()
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, 
-                                                        stratify=y, random_state=42)
+    if len(X) < 10:
+        print(f"[WARNING] Poucos dados para treinamento ({len(X)} amostras).")
+        # Se houver pouquíssimos dados, o split estratificado pode falhar.
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, 
+                                                            random_state=42)
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, 
+                                                            stratify=y, random_state=42)
 
     pipe = Pipeline([
-        ('tfidf', TfidfVectorizer(ngram_range=(1,2), max_df=0.9, min_df=2)),
+        ('tfidf', TfidfVectorizer(ngram_range=(1,2), max_df=0.9, min_df=1)), # min_df=1 para datasets pequenos
         ('clf', LogisticRegression(max_iter=1000, class_weight='balanced'))
     ])
 
